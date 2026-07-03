@@ -1,3 +1,55 @@
+commit 7a82b13f835458b83a6547494ded4af98d18f3d1
+Merge: 549ecfd d971b72
+Author: Patrick Schleizer <adrelanos@whonix.org>
+Date:   Fri Jul 3 14:05:02 2026 -0400
+
+    Merge remote-tracking branch 'refs/remotes/org-ai-assisted/master'
+
+commit d971b725d03528075e3075095aff45336469a0d4
+Merge: 549ecfd 61c9833
+Author: assisted-by-ai (Bot Account) (Machine Account) <228987186+assisted-by-ai@users.noreply.github.com>
+Date:   Fri Jul 3 13:28:14 2026 -0400
+
+    Merge pull request #1 from org-ai-assisted/link-confirmation-env-override
+
+    open-link-confirmation: allow env vars to override config
+
+commit 61c9833ffd4409f8d7a2f3bcc56e99f8bd1674a0
+Author: claude (dev26 2ff89067-ed45-4016-a970-4c261ee4ed0f) <noreply@anthropic.com>
+Date:   Mon Jun 29 12:13:46 2026 -0400
+
+    open-link-confirmation: allow env vars to override config
+
+    Make link_confirmation_for_links and link_confirmation_for_files
+    settable via the environment, with environment values taking
+    precedence over the on-disk /etc/open_link_confirm.d/*.conf files.
+
+    Previously the shipped 31_default.conf was sourced unconditionally at
+    runtime and always clobbered any value provided via the environment.
+    source_config() now captures any environment-provided values before
+    sourcing the config files and re-applies them afterwards, so config is
+    the baseline and the environment wins. Document the precedence in
+    31_default.conf.
+
+    Also fix shellcheck findings in the touched script:
+    - Split the SC2155 'local MSG=$(...)' in error_handler. The masked
+      command-substitution status was load-bearing: sanitize-string can
+      fail (AppArmor-confined caller, per the file header), and under
+      'set -e' the separated assignment would re-trigger the ERR trap
+      before its dialog showed. Tolerate that failure with '|| true'.
+    - input_object_original: "$@" -> "$*" for the scalar assignment (SC2124).
+    - "$BASH_SOURCE" -> "${BASH_SOURCE[0]}" (SC2128).
+    - Use ${HOME} instead of an unexpanded '~' in two trace messages (SC2088).
+
+    Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+    Claude-Session: https://claude.ai/code/session_01R1fnYEDUievJpNVEQEE9p1
+
+commit 549ecfd83ea282ad10f6c81958a7c2936e79fc4b
+Author: Patrick Schleizer <adrelanos@whonix.org>
+Date:   Wed May 20 22:15:37 2026 +0000
+
+    bumped changelog version
+
 commit 2b43c090f58882e3a14067a6ca5ff699f54e49ea
 Author: Patrick Schleizer <adrelanos@whonix.org>
 Date:   Wed May 20 16:57:03 2026 -0400
