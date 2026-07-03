@@ -24,14 +24,18 @@ trap "error_handler" ERR
 error_handler() {
    local exit_code="$?"
 
-   local MSG="$0 script bug.
+   ## sanitize-string may fail (e.g. AppArmor-confined caller, see file header).
+   ## Tolerate it with '|| true' so this ERR trap still shows its dialog instead
+   ## of aborting / re-entering under 'set -e'.
+   local MSG
+   MSG="$0 script bug.
 
 No panic. Nothing is broken. Just some rare condition has been hit.
 Try again later. If this is a transient issue, it can be safely ignored.
 
 Debugging information:
 
-BASH_COMMAND: <code>$(sanitize-string -- 255 "$BASH_COMMAND")</code>
+BASH_COMMAND: <code>$(sanitize-string -- 255 "$BASH_COMMAND" || true)</code>
 exit_code: <code>$exit_code</code>"
 
    MSG="$(/usr/libexec/msgcollector/br_add "$MSG")"
@@ -48,6 +52,14 @@ exit_code: <code>$exit_code</code>"
 source /usr/libexec/helper-scripts/has.sh
 
 source_config() {
+   ## Environment variables take precedence over the configuration files.
+   ## Remember any values provided via the environment before the
+   ## configuration files are sourced, then restore them afterwards so the
+   ## environment wins over the on-disk defaults.
+   local link_confirmation_for_links_env link_confirmation_for_files_env
+   link_confirmation_for_links_env="${link_confirmation_for_links:-}"
+   link_confirmation_for_files_env="${link_confirmation_for_files:-}"
+
    shopt -s nullglob
    local i
    for i in \
@@ -58,6 +70,13 @@ source_config() {
       bash -n "$i" || exit 1
       source "$i"
    done
+
+   if [ -n "$link_confirmation_for_links_env" ]; then
+      link_confirmation_for_links="$link_confirmation_for_links_env"
+   fi
+   if [ -n "$link_confirmation_for_files_env" ]; then
+      link_confirmation_for_files="$link_confirmation_for_files_env"
+   fi
 }
 
 preparation() {
@@ -84,7 +103,7 @@ preparation() {
       is_file="0"
    fi
 
-   input_object_original="$@"
+   input_object_original="$*"
 
    trim="128"
 
@@ -289,7 +308,7 @@ workstation() {
    [ ! -n "$tb_title" ] || open_in_tool_bin_name="$tb_title"
    [ -n "$open_in_tool_bin_name" ] || open_in_tool_bin_name="$open_in_tool_bin"
 
-   if [ "$open_in_tool_bin_name_readlink" = "$BASH_SOURCE" ]; then
+   if [ "$open_in_tool_bin_name_readlink" = "${BASH_SOURCE[0]}" ]; then
       title="Link Confirm Open ERROR"
       msg="<p>The following <b>$input_type</b> cannot be opened in <u>$open_in_tool_bin_name</u>, because no browser is installed, that supports open-link-confirmation.</p>
 <p><code><blockquote>$input_object_stripped_and_trimmed$extra_long_link</blockquote></code></p>"
@@ -352,9 +371,9 @@ final() {
    ## https://github.com/QubesOS/qubes-issues/issues/4113
    if [ "$qubes_type" = "DispVM" ]; then
       if [ -f ~/.open-link-confirmation ]; then
-         true "~/.open-link-confirmation already exists. Leaving variable ask_for_confirmation as is."
+         true "${HOME}/.open-link-confirmation already exists. Leaving variable ask_for_confirmation as is."
       else
-         true "~/.open-link-confirmation does not exist yet. Setting ask_for_confirmation=0."
+         true "${HOME}/.open-link-confirmation does not exist yet. Setting ask_for_confirmation=0."
          local ask_for_confirmation="0"
          touch ~/.open-link-confirmation
       fi
